@@ -12,4 +12,10 @@
    
      `Boolean.valueOf(boolean)`方法就是这种做法的说明，它不会创建一个对象。这种做法类似于`Flyweightpattern`设计模式。(It can greatly improve performance if equivalent objects are requested often, especially if they are expensive to create)如果参数对象都是等价的，特别是创建耗性能的对象，这样做可以最大程度地提供性能。
 
-    (The ability of static factory methods to return the same object from repeated invocations allows classes to maintain strict control over what instances exist at any time)静态工厂方法的作用是重复执行都会返回同一个对象，只是类自身保持严格控制对象在什么时候创建。(Classes that do this are said to be instance-controlled)类的这种行为被称为对象控制（我们常说的委托？）。编写对象控制类有几个理由。对象控制保证一个类是单例的或者不可实例化的。而且
+    (The ability of static factory methods to return the same object from repeated invocations allows classes to maintain strict control over what instances exist at any time)静态工厂方法的作用是重复执行都会返回同一个对象，只是类自身保持严格控制对象在什么时候创建。(Classes that do this are said to be instance-controlled)类的这种行为被称为对象控制（我们常说的委托？）。编写对象控制类有几个理由。对象控制保证一个类是单例的或者不可实例化的。而且保证了两个不相等的对象存在以下关系:`a.equals(b)为否则表示a==b也为否`，这是基于享元模式的。枚举类型提供了这样的保证。
+
+    第三个静态工厂方法的优点是不同于构造函数，他们可以返回任意一个子类类型的实例。它提供了让你更加灵活地选择类所返回的实例。
+    
+    一个灵活的应用就是API可以返回对应的实例而不通过公有的构造函数。隐藏了类的内部实现方式成为一个压缩的API。(This technique lends itself to interface-based frameworks (Item 20), where interfaces provide natural return types for static factory methods)这项术借助自身基于接口的框架，通过静态工厂方法返回接口的实例。在Java 8之前，接口不能包含静态工厂方法。传统的方法是，静态工厂方法为接口类型Type声明一个不可实例化的类，名字为Types。比如，Java的Collections框架有45个接口的工具方法,提供不可变的容器，同步容器等等。几乎所有的方法返回都是通过静态工厂方法。而返回的实例所对应的类都是非公有的。Collections框架相比于生成45个不同的共有实现类更加小型，每一个都有对应的便捷实现。这样并不是为了减少一大批API，而是降低理解的难度：这样的数量和理解的困难为了让开发者熟练使用API。（The programmer knows that the returned object has precisely the API specified by its interface, so there is no need to read additional class documentation for the implementation class）开发者知道返回对象所对应的接口API，无需阅读其他文档来了解实现类。（Furthermore, using such a static factory method requires the client to refer to the returned object by interface rather than implementation class, which is generally good practice）而且，采用工厂方法要求客户端通过接口返回对象而不是实现类，这通常是一种很好的做法。
+
+    
