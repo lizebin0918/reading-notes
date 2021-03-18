@@ -107,6 +107,7 @@ class A {
     * 小对象
 
 ####调优参数
+* 查看参数：java -XX:+PrintFlagsFinal -version
 * -XX:MaxTenuringThreshold:s0-s1之间的复制年龄超过限制时，进入old区
 
 
