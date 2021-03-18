@@ -90,21 +90,41 @@ class A {
     * 需要更多的空间
     
 ####堆内存逻辑分区
-* Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法，新生成的对象会放在eden区，进行一次垃圾回收之后，会把eden区存活的对象转移到s0，下次eden又满了，会把s0和eden区存活的对象转移到s1，如果对象年龄大于指定值，则进入老年代
+* Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法
 * Old 区：tenured，采用Mark Compact 或者 Mark Sweep
 * 新生代大量死去，少量存货，采用复制算法
-* 老念叨存活率高，回收较少，采用MC或MS算法
-* MinorGC/YGC:年轻代空间耗尽时（Eden + s0 或者 s1）触发
-* MajorGC/FullGC:在老年代无法继续分配空间时触发，新生代和老年代同时进行回收
-* 栈上分配
-    * 线程私有小对象
-    * 无逃逸
-    * 支持标量替换
-    * 无需调整
-* 线程本地分配TLAB（Thread Local Allocation Buffer）
-    * 占用eden，默认1%
-    * 多线程的时候不用竞争eden就可以申请空间，提高效率
-    * 小对象
+* 老年代存活率高，回收较少，采用MC或MS算法
+* GC按照回收区域分为两大种类型
+    * 一种是部分收集（Partial GC）
+    > 新生代收集（Minor GC / Young GC）：只是新生代的垃圾收集
+    > 老年代收集（Major GC / Old GC）：只是老年代的收集。 注意很多时候Major GC 会和Full GC混淆使用，需要具体分辨是老年代回收还是整堆回收
+    
+    * 一种是整堆收集（Full GC）
+    > 收集整个Java堆和方法区的垃圾回收
+    
+* GC触发条件
+    * Minor GC 只在Eden区满的时候触发，Survivor区满并不会触发Minor GC，但是并不是说Survivor区不会被垃圾回收，而是说在Eden区满时触发Minor GC然后Eden区和Survivor区一起被垃圾回收，可以说Survivor区时被动垃圾回收的
+    * 在老年代空间不足的时候，会先尝试触发Minor GC，如果之后空间还不足，就会执行Major GC
+    * Full GC触发机制
+        * 调用System.gc()时，系统建议执行Full GC，但是不必然执行
+        * 老年代不足的时候
+        * 方法区不足的时候
+        * 通过Minor GC后进入老年代的平均大小大于老年代的可用内存
+        * 由Eden区，survivor0（From Space）区先survivor1（To Space）区复制时，对象大小大于To Space可用内存，则把该对象转存到老年代，且老年代的可用内存小于该对象大小
+
+####垃圾收集器
+* 组合一：Serial + Serial Old
+    * 所有应用线程都要停止，单CPU效率最高，Client模式默认垃圾回收器
+    * 在safe point之后才能进行回收 
+* 组合二：Parallel Scavenge + Parallel Old
+    * 多线程并行清理，会引起STW，JDK默认的垃圾回收算法
+* 组合三：ParNew + CMS
+    * ParNew 比 PS 只是加强而已，PN响应时间优先，PS吞吐量优先
+    * CMS的四个阶段
+        * initial mark（初始标记）：单线程，引起STW
+        * concurrent mark（并发标记）：多线程，并发执行
+        * remark（重新标记）：多线程标记
+        * concurrent sweep（并发清理）：单线程，并发清理
 
 ####调优参数
 * 查看参数：java -XX:+PrintFlagsFinal -version
