@@ -92,6 +92,7 @@ class A {
 ####堆内存逻辑分区
 * Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法
 * Old 区：tenured，采用Mark Compact 或者 Mark Sweep
+* 方法区：jdk1.7 永久代/jdk1.8 metaspace，存放class对象，1.8之后，字符串常量池存储在堆区
 * 新生代大量死去，少量存货，采用复制算法
 * 老年代存活率高，回收较少，采用MC或MS算法
 * GC按照回收区域分为两大种类型
@@ -125,9 +126,106 @@ class A {
         * concurrent mark（并发标记）：多线程，并发执行
         * remark（重新标记）：多线程标记
         * concurrent sweep（并发清理）：单线程，并发清理
+    * 并发标记：三色标记
+    * CMS缺点
+        * CMS会由于碎片太多，无法放置大对象，会退化成Serial Old
+        * Memnory fragmentation
+            * -XX:UseCMSCompactAtFullCollection
+            * -XX:CmsFullGCsBeforeCompaction 默认为0指的是经过多少次FGC才进行压缩
+        * Floating Garbage
+            * GC日志：Concurrent Mode Failure / PromotionFailed
+            * 解决方案：降低出发CMS的阈值-CMSInitiatingOccupancyFraction 从默认的92%降低到68%，会浪费一些内存，换来更早地释放垃圾
 
-####调优参数
-* 查看参数：java -XX:+PrintFlagsFinal -version
-* -XX:MaxTenuringThreshold:s0-s1之间的复制年龄超过限制时，进入old区
+####常用指令
+* dump出堆内存快照，解析工具：MAT/jhat
+
+####日志详解
+* 生产环境的gc log 需要按大小切分，不然没法看
+
+```
+-XX:+PrintGC 输出GC日志
+-XX:+PrintGCDetails 输出GC的详细日志
+-XX:+PrintGCTimeStamps 输出GC的时间戳（以基准时间的形式）
+-XX:+PrintGCDateStamps 输出GC的时间戳（以日期的形式，如 2013-05-04T21:53:59.234+0800）
+-XX:+PrintHeapAtGC 在进行GC的前后打印出堆的信息
+-Xloggc:../logs/xxxx-service-gc-%t.log 日志文件的输出路径，按照系统时间
+-XX:+PrintReferenceGC 打印年轻代各个引用的数量以及时长
+-XX:+UseGCLogFileRotation：是否启用 GC 日志文件自动转储, GC 日志文件按大小切割时需要设置，文件会自动滚动清除
+-XX:GCLogFileSize：控制 GC 日志文件的大小, 用于 GC 日志的切割, 不宜设置太大, 太大由于写日志需要进行 I/O 操作, I/O 操作需要在用户态和和心态之间切换, 会直接影响 user time 大小和 sys time 大小, 最终影响到 real time 大小, real time 就是 GC 耗费的时间。例如：-XX:GCLogFileSize=50M
+-XX:NumberOfGCLogFiles：GC 日志文件最多保存的个数。例如：-XX:NumberOfGCLogFiles=10
+-XX:+PrintGCApplicationStopedTime ：查看GC造成的应用暂停时间
+-XX:+HeapDumpOnOutOfMemoryError:内存溢出时输出 dump 文件
+-XX:+printGCCause GC原因
+```
+
+* Parallel Scavenge + Parallel Old
+    * 2021-03-10T17:00:48.600+0800:gc时间
+    * GC：触发GC，这里指的是Young GC，Full GC就是整堆回收
+    * (Allocation Failure)：触发GC的原因
+    * PSYoungGen：年轻代收集器
+    * 2045356K->13285K(2067456K)：回收前的年轻代的空间2045356K，清理之后为 13285K，2067456K 为**整个年轻代大小**
+    * 2460578K->428516K(3116032K)：回收前的总堆空间2460578K，清理之后为 428516K，3116032K 为**整个堆的大小**
+    * 0.0214478 secs：实际回收时间
+
+```
+2021-03-10T17:00:48.600+0800: 1446.902: [GC (Allocation Failure) [PSYoungGen: 2045356K->13285K(2067456K)] 2460578K->428516K(3116032K), 0.0214478 secs] [Times: user=0.20 sys=0.01, real=0.02 secs]
+```
+
+* ParNew + CMS
+
+```
+2021-03-18T15:20:16.458+0800: 5090.260: [GC (CMS Initial Mark) [1 CMS-initial-mark: 525226K(1048576K)] 615702K(5767168K), 0.0086121 secs] [Times: user=0.02 sys=0.01, real=0.00 secs]
+2021-03-18T15:20:16.467+0800: 5090.269: [CMS-concurrent-mark-start]
+2021-03-18T15:20:16.564+0800: 5090.366: [CMS-concurrent-mark: 0.098/0.098 secs] [Times: user=0.22 sys=0.00, real=0.10 secs]
+2021-03-18T15:20:16.565+0800: 5090.366: [CMS-concurrent-preclean-start]
+2021-03-18T15:20:16.569+0800: 5090.371: [CMS-concurrent-preclean: 0.004/0.004 secs] [Times: user=0.01 sys=0.00, real=0.01 secs]
+2021-03-18T15:20:16.569+0800: 5090.371: [CMS-concurrent-abortable-preclean-start]
+ CMS: abort preclean due to time 2021-03-18T15:20:21.594+0800: 5095.396: [CMS-concurrent-abortable-preclean: 3.324/5.025 secs] [Times: user=4.11 sys=0.02, real=5.02 secs]
+2021-03-18T15:20:21.595+0800: 5095.397: [GC (CMS Final Remark) [YG occupancy: 1566656 K (4718592 K)]2021-03-18T15:20:21.595+0800: 5095.397: [Rescan (parallel) , 0.3725245 secs]2021-03-18T15:20:21.967+0800: 5095.769: [weak refs processing, 0.0005480 secs]2021-03-18T15:20:21.968+0800: 5095.770: [class unloading, 0.0536364 secs]2021-03-18T15:20:22.022+0800: 5095.823: [scrub symbol table, 0.0130051 secs]2021-03-18T15:20:22.035+0800: 5095.836: [scrub string table, 0.0015001 secs][1 CMS-remark: 525226K(1048576K)] 2091883K(5767168K), 0.4418468 secs] [Times: user=1.56 sys=0.00, real=0.44 secs]
+2021-03-18T15:20:22.037+0800: 5095.839: [CMS-concurrent-sweep-start]
+2021-03-18T15:20:22.062+0800: 5095.864: [CMS-concurrent-sweep: 0.024/0.024 secs] [Times: user=0.03 sys=0.00, real=0.03 secs]
+2021-03-18T15:20:22.062+0800: 5095.864: [CMS-concurrent-reset-start]
+2021-03-18T15:20:22.073+0800: 5095.875: [CMS-concurrent-reset: 0.011/0.011 secs] [Times: user=0.01 sys=0.01, real=0.01 secs]
+```
+
+* 查看gc情况：./jstat -gc [pid] 1000
+
+```
+S0C：第一个幸存区的大小
+S1C：第二个幸存区的大小
+S0U：第一个幸存区的使用大小
+S1U：第二个幸存区的使用大小
+EC：伊甸园区的大小
+EU：伊甸园区的使用大小
+OC：老年代大小
+OU：老年代使用大小
+MC：方法区大小
+MU：方法区使用大小
+CCSC:压缩类空间大小
+CCSU:压缩类空间使用大小
+YGC：年轻代垃圾回收次数
+YGCT：年轻代垃圾回收消耗时间
+FGC：老年代垃圾回收次数
+FGCT：老年代垃圾回收消耗时间
+GCT：垃圾回收消耗总时间
+```
+
+####JVM案例
+* 吞吐量：用户代码执行时间 /（用户代码执行时间 + 垃圾回收时间）--离线处理 PS + PO
+* 响应时间：STW越短，响应时间越高--在线处理并立即响应 PN + CMS
+* 所谓调优，首先确定，吞吐量优先？还是响应时间优先？
+* 并发量：对于某一个业务的接口，1秒钟可以处理多少个请求（这里的操作可以算做一个事务）
+* 如何根据并发量预估内存？
+    * 前提：要求响应时间再100ms以内
+    * 假设：一个请求需要1M的内存
+    * 评估：1秒有1000个并发，需要1G的内存，其实也可以512M，在0.5秒前500个请求处理完并且返回释放内存，后500个再来也就可以了。但是如果处理太慢，导致前面的没处理完，后面的又来，这个时候就有可能发生Full GC
+* 系统CPU经常100%，如何调优？
+    * 找出哪个进程CPU高（top）
+    * 该进程中的哪个线程CPU高（top -Hp）
+    * 导出该线程的堆栈（jstack）
+    * 查找哪个栈帧的消耗时间（jstack，要转成16进制）
+    * 工作线程占比高 | 垃圾回收线程占比高
+* 查看当前堆中最多的对象排名：./jmap -histo [pid] | head -20
+* 线上环境开启jmx需要运维开通端口，还要配置账号密码，**而且对程序运行有一定影响**，一般不会采用，最好还是用arthas，图形界面是在压测阶段用的
 
 
