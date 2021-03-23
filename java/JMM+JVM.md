@@ -138,6 +138,7 @@ class A {
 
 ####常用指令
 * dump出堆内存快照，解析工具：MAT/jhat
+* 在线分析工具：https://console.perfma.com/
 
 ####日志详解
 * 生产环境的gc log 需要按大小切分，不然没法看
@@ -163,7 +164,7 @@ class A {
     * GC：触发GC，这里指的是Young GC，Full GC就是整堆回收
     * (Allocation Failure)：触发GC的原因
     * PSYoungGen：年轻代收集器
-    * 2045356K->13285K(2067456K)：回收前的年轻代的空间2045356K，清理之后为 13285K，2067456K 为**整个年轻代大小**
+    * 2045356K->13285K(2067456K)：回收前的年轻代的空间2045356K，清理之后为 13285K，这里的清理是**指回收的对象+升迁到老年代的对象**，2067456K 为**整个年轻代大小**
     * 2460578K->428516K(3116032K)：回收前的总堆空间2460578K，清理之后为 428516K，3116032K 为**整个堆的大小**
     * 0.0214478 secs：实际回收时间
 
@@ -212,7 +213,7 @@ GCT：垃圾回收消耗总时间
 
 ####JVM案例
 * 吞吐量：用户代码执行时间 /（用户代码执行时间 + 垃圾回收时间）--离线处理 PS + PO
-* 响应时间：STW越短，响应时间越高--在线处理并立即响应 PN + CMS
+* 响应时间：STW越短，响应时间越高--在线处理并立即响应，关注实时交互 PN + CMS
 * 所谓调优，首先确定，吞吐量优先？还是响应时间优先？
 * 并发量：对于某一个业务的接口，1秒钟可以处理多少个请求（这里的操作可以算做一个事务）
 * 如何根据并发量预估内存？
@@ -227,5 +228,35 @@ GCT：垃圾回收消耗总时间
     * 工作线程占比高 | 垃圾回收线程占比高
 * 查看当前堆中最多的对象排名：./jmap -histo [pid] | head -20
 * 线上环境开启jmx需要运维开通端口，还要配置账号密码，**而且对程序运行有一定影响**，一般不会采用，最好还是用arthas，图形界面是在压测阶段用的
+
+#####CMS详解
+* 存在问题
+    * 存在内存碎片，产生浮动垃圾，添加参数：-XX:CMSFullGCsBeforeCompaction
+* 第一阶段（初始标记-单线程）：找到根对象（GC Roots）-- This is initial Marking phase of CMS where all the objects directly reachable from roots are marked and this is done with all the mutator threads stopped.
+* 第二阶段（并发标记）：从第一阶段的根对象进行扫描并标记，用户线程和扫描线程并发执行 -- Start of concurrent marking phase.In Concurrent Marking phase, threads stopped in the first phase are started again and all the objects transitively reachable from the objects marked in first phase are marked here
+* 第三阶段（重新标记-多线程并行）：在上阶段的标记过程中，可能会存在多标记或者漏标记的情况，需要STW，重新整理标记即可
+* 第四阶段（并发清理）
+
+#####G1详解
+* 算法概念：做YGC的时候，根对象可能已经挪到old区，这样扫描的效率非常低，JVM设置了Card Table，如果一个old区的Card Table中有对象指向Young区，就将它设置为dirty，下次再扫描时，只需要扫描Dirty Card Table即可，在结构上，Card Table 用BitMap来实现
+* 内存区域分成：Eden、Survivor、Old、Humongous
+* 并发收集，也是采用三色标记算法
+* 压缩空闲空间不会延长GC的暂停时间
+* 更容易预测的GC暂停时间
+* 适用不需要事先很高的吞吐量的场景，**吞吐量也很重要，但是往往通过升级硬件即可**    
+
+####并发标记算法
+* 标记规则：从根（GC Root）开始标记，一直往子节点（成员变量）遍历，遍历的时候先标记灰色，如果子节点标记为灰色，父节点变为灰色，如此循环到叶子节点
+* 漏标的情况
+    * 本来是黑色->灰色->白色，但是用户线程也在进行，有可能黑色指向了白色，而且灰色指向白色的断掉了
+    * 并发标记过程中，Mutator删除了所有从灰色到白色的引用，会产生漏标
+* 解决漏标
+    * incremental update--增量更新，关注引用的增加，把黑色重新标记为灰色，下次重新扫描
+    * SATB snapshot at the beginning -- 关注引用的删除，当灰色指向白色消失时，要把这个引用推到GC的堆栈，保证白色还能被GC扫描到 
+* 解决在标记对象的过程中，对象引用关系正在发生变化
+* 白色：未标记的对象
+* 灰色：自身被标记，成员标量未标记
+* 黑色：自身和成员变量都已标记
+* 
 
 
