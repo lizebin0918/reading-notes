@@ -260,6 +260,6 @@ GCT：垃圾回收消耗总时间
 
 ####JVM参数
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
-* 打印开启参数：java XX:-PrintCommandLineFlags
+* 打印开启参数：java XX:-PrintCommandLineFlags -version
 
 
