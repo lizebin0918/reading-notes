@@ -262,4 +262,14 @@ GCT：垃圾回收消耗总时间
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
 * 打印开启参数：java XX:-PrintCommandLineFlags -version
 
+#####常见晋升老年代机制
+* 担保机制
+> 当Survivor区的的内存大小不足以装下下一次Minor GC所有存活对象时，就会启动担保机制，把Survivor区放不下的对象放到老年代；
+
+* 大对象直接放入老年代
+> 大对象（大小大于-XX:PretenureSizeThreshold的对象）直接在老年代分配内存；（只对Serial和ParNew收集器有效，对于Parallel Scavenge收集器无效）
+
+* 长期存活的对象进入老年代
+> 把age大于-XX:MaxTenuringThreshold的对象晋升到老年代；（对象每在Survivor区熬过一次，其age就增加一岁）
+
 
