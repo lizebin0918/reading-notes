@@ -257,6 +257,9 @@ GCT：垃圾回收消耗总时间
 * 白色：未标记的对象
 * 灰色：自身被标记，成员标量未标记
 * 黑色：自身和成员变量都已标记
-* 
+
+####JVM参数
+* 查询默认参数：java -XX:+PrintFlagsInitial | grep 
+* 打印开启参数：java XX:-PrintCommandLineFlags
 
 
