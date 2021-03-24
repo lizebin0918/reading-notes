@@ -1,12 +1,12 @@
 ### 视频笔记-JMM
 
-####各个类加载器职责
+#### 各个类加载器职责
 * Bootstrap ClassLoader：JAVA_HOME/jre/lib/rt.jar、resources.jar、sun.boot.class.path路径下的包，用于提供jvm运行所需的包
 * Extension ClassLoader：派生继承自java.lang.ClassLoader，父类加载器为启动类加载器。从系统属性：java.ext.dirs目录中加载类库，或者从JDK安装目录：jre/lib/ext目录下加载类库
 * Application Classloader：它负责加载环境变量classpath或者系统属性java.class.path指定路径下的类库。它是程序中默认的类加载器，我们Java程序中的类，都是由它加载完成的。
 * Custom Classloader:自定义类加载器
 
-####类的加载过程
+#### 类的加载过程
 * 加载（loading）：查找并加载类的二进制数据（*.class文件）
 * 准备（preparation）：为类的**静态变量**分配内存，并将其初始化为默认值，这里的默认值就是说引用对象为null，但是指对象就等于它们对应的默认值，这里的默认值如果是int就是为0，boolean就是为false，引用类型就是为null#这个class还没new，不会为实例变量分配内存
 * 解析（resolution）：解析：把类中的符号引用转换为直接引用（Object a = Object.class//指向这个class的实际内存地址）
@@ -21,7 +21,7 @@ class A {
 }
 ```
 
-####主动使用情况
+#### 主动使用情况
 * 主动使用情况
 * 创建类的实例
 * 访问类或者接口的静态变量，或者对该静态变量赋值
@@ -30,25 +30,25 @@ class A {
 * 初始化一个类的子类
 * Java虚拟机启动时被标明为启动类的类
 
-####双亲委托机制
+#### 双亲委托机制
 * 父加载器不是"类加载器的加载器"
 * 各个类加载器之间并不是继承关系，只是引用了parent属性而已，加载一个类会一直递归往上找对应的类加载器，如果没有找到就往下找到对应父类加载
 * 双亲委派是一个孩子向父亲方向，然后父亲向孩子方向的双亲委派过程。如果父亲能加载就让父亲加载，如果都不能就只能自己加载，如果我们自己写了一个String类，并且把这个类加载了，这样就会有安全问题。
 * 自定义类加载器：实现jdk的ClassLoader抽象类，重写findClass方法，每次都会根据双亲委派原则加载Class。如果需要实现热部署，可以直接重写loadClass()，无需从父类需要class，重新生成ClassLoader并加载class即可
 
-####硬件测数据一致性
+#### 硬件测数据一致性
 * intel的缓存一致性:MESI--https://www.cnblogs.com/z00377750/p/9180644.html
 * 缓存行：读取缓存以cache line为基本单位，目前64bytes，位于同一缓存行的两个不同数据，被两个不同CPU锁定，产生互相影响的伪共享问题，引出总线风暴问题--https://cloud.tencent.com/developer/article/1707875
 * **解决上述问题：使用缓存行的对齐能够提高效率**，代码:
 
-####CPU执行乱序问题
+#### CPU执行乱序问题
 * CPU如果发现两条指令没有依赖关系，当第一条在执行等待，会在等待过程中执行第二条指令--https://www.cnblogs.com/liushaodong/p/4777308.html
 * 解决乱序问题：CPU内存屏障
 * sfence: store | 在sfence指令前的写操作必须在sfence指令后的写操作前完成
 * lfence: load | 在lfence指令前的读操作必须在lfence指令后的读操作前完成
 * mfence: mix | 在mfence指令前的读写操作必须在mfence后的读写操作前完成 
 
-####volatile的实现细节
+#### volatile的实现细节
 * 保证了可见性和有序性（实际就是在指令前后添加屏障）
 * 字节码层面：class字节码文件只是添加了一个关键字：volatile
 * JVM层面：
@@ -56,19 +56,19 @@ class A {
     * 读操作:LocalLoadBarrier/volatile 读操作/LoadStoreBarrier
 * 
 
-####synchronized实现细节
+#### synchronized实现细节
 * 字节码层面
     * monitorenter/monitorexit
 * C/C++调用了操作系统提供的同步机制
 * OS和硬件层面
     * X86: lock
 
-####Java的内存模型
+#### Java的内存模型
 * 每个线程都有自己的线程栈和工作内存，每次读取和存储变量都是在工作内存和主内存之间交互
 * JVM会有主内存
 * 一个线程栈里面装着一个个栈帧，每个栈帧包括：Local variable/Operand Stacks/Dynamic linking/return address
 
-####GC垃圾回收
+#### GC垃圾回收
 * 怎么定义垃圾？当对象没有被引用
 * 如何找到垃圾？
     * 引用计数
@@ -78,7 +78,7 @@ class A {
     > 常量池
     > JNI 指针
 
-####GC算法
+#### GC算法
 * Mark-Sweep（标记清除）
     * 太多空间碎片，无法存放大对象
     * 适合存货对象比较多，回收对象比较少的情况
@@ -89,7 +89,7 @@ class A {
     * 对象的拷贝移动，引用需要调整
     * 需要更多的空间
     
-####堆内存逻辑分区
+#### 堆内存逻辑分区
 * Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法
 * Old 区：tenured，采用Mark Compact 或者 Mark Sweep
 * 方法区：jdk1.7 永久代/jdk1.8 metaspace，存放class对象，1.8之后，字符串常量池存储在堆区
@@ -113,7 +113,7 @@ class A {
         * 通过Minor GC后进入老年代的平均大小大于老年代的可用内存
         * 由Eden区，survivor0（From Space）区先survivor1（To Space）区复制时，对象大小大于To Space可用内存，则把该对象转存到老年代，且老年代的可用内存小于该对象大小
 
-####垃圾收集器
+#### 垃圾收集器
 * 组合一：Serial + Serial Old
     * 所有应用线程都要停止，单CPU效率最高，Client模式默认垃圾回收器
     * 在safe point之后才能进行回收 
@@ -136,11 +136,11 @@ class A {
             * GC日志：Concurrent Mode Failure / PromotionFailed
             * 解决方案：降低出发CMS的阈值-CMSInitiatingOccupancyFraction 从默认的92%降低到68%，会浪费一些内存，换来更早地释放垃圾
 
-####常用指令
+#### 常用指令
 * dump出堆内存快照，解析工具：MAT/jhat
 * 在线分析工具：https://console.perfma.com/
 
-####日志详解
+#### 日志详解
 * 生产环境的gc log 需要按大小切分，不然没法看
 
 ```
@@ -211,7 +211,7 @@ FGCT：老年代垃圾回收消耗时间
 GCT：垃圾回收消耗总时间
 ```
 
-####JVM案例
+#### JVM案例
 * 吞吐量：用户代码执行时间 /（用户代码执行时间 + 垃圾回收时间）--离线处理 PS + PO
 * 响应时间：STW越短，响应时间越高--在线处理并立即响应，关注实时交互 PN + CMS
 * 所谓调优，首先确定，吞吐量优先？还是响应时间优先？
@@ -229,7 +229,7 @@ GCT：垃圾回收消耗总时间
 * 查看当前堆中最多的对象排名：./jmap -histo [pid] | head -20
 * 线上环境开启jmx需要运维开通端口，还要配置账号密码，**而且对程序运行有一定影响**，一般不会采用，最好还是用arthas，图形界面是在压测阶段用的
 
-#####CMS详解
+#### #CMS详解
 * 存在问题
     * 存在内存碎片，产生浮动垃圾，添加参数：-XX:CMSFullGCsBeforeCompaction
 * 第一阶段（初始标记-单线程）：找到根对象（GC Roots）-- This is initial Marking phase of CMS where all the objects directly reachable from roots are marked and this is done with all the mutator threads stopped.
@@ -237,7 +237,7 @@ GCT：垃圾回收消耗总时间
 * 第三阶段（重新标记-多线程并行）：在上阶段的标记过程中，可能会存在多标记或者漏标记的情况，需要STW，重新整理标记即可
 * 第四阶段（并发清理）
 
-#####G1详解
+#### #G1详解
 * 算法概念：做YGC的时候，根对象可能已经挪到old区，这样扫描的效率非常低，JVM设置了Card Table，如果一个old区的Card Table中有对象指向Young区，就将它设置为dirty，下次再扫描时，只需要扫描Dirty Card Table即可，在结构上，Card Table 用BitMap来实现
 * 内存区域分成：Eden、Survivor、Old、Humongous
 * 并发收集，也是采用三色标记算法
@@ -245,7 +245,7 @@ GCT：垃圾回收消耗总时间
 * 更容易预测的GC暂停时间
 * 适用不需要事先很高的吞吐量的场景，**吞吐量也很重要，但是往往通过升级硬件即可**    
 
-####并发标记算法
+#### 并发标记算法
 * 标记规则：从根（GC Root）开始标记，一直往子节点（成员变量）遍历，遍历的时候先标记灰色，如果子节点标记为灰色，父节点变为灰色，如此循环到叶子节点
 * 漏标的情况
     * 本来是黑色->灰色->白色，但是用户线程也在进行，有可能黑色指向了白色，而且灰色指向白色的断掉了
@@ -258,11 +258,11 @@ GCT：垃圾回收消耗总时间
 * 灰色：自身被标记，成员标量未标记
 * 黑色：自身和成员变量都已标记
 
-####JVM参数
+#### JVM参数
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
 * 打印开启参数：java XX:-PrintCommandLineFlags -version
 
-#####常见晋升老年代机制
+#### #常见晋升老年代机制
 * 担保机制
 > 当Survivor区的的内存大小不足以装下下一次Minor GC所有存活对象时，就会启动担保机制，把Survivor区放不下的对象放到老年代；
 
