@@ -179,17 +179,18 @@ class A {
 
 ```
 2021-03-18T15:20:16.458+0800: 5090.260: [GC (CMS Initial Mark) [1 CMS-initial-mark: 525226K(1048576K)] 615702K(5767168K), 0.0086121 secs] [Times: user=0.02 sys=0.01, real=0.00 secs]
-2021-03-18T15:20:16.467+0800: 5090.269: [CMS-concurrent-mark-start]
-2021-03-18T15:20:16.564+0800: 5090.366: [CMS-concurrent-mark: 0.098/0.098 secs] [Times: user=0.22 sys=0.00, real=0.10 secs]
-2021-03-18T15:20:16.565+0800: 5090.366: [CMS-concurrent-preclean-start]
-2021-03-18T15:20:16.569+0800: 5090.371: [CMS-concurrent-preclean: 0.004/0.004 secs] [Times: user=0.01 sys=0.00, real=0.01 secs]
-2021-03-18T15:20:16.569+0800: 5090.371: [CMS-concurrent-abortable-preclean-start]
- CMS: abort preclean due to time 2021-03-18T15:20:21.594+0800: 5095.396: [CMS-concurrent-abortable-preclean: 3.324/5.025 secs] [Times: user=4.11 sys=0.02, real=5.02 secs]
+> 525226K(1048576K)：老年代使用（最大值）
+> 615702K(5767168K)：整个堆使用（最大值）
+
 2021-03-18T15:20:21.595+0800: 5095.397: [GC (CMS Final Remark) [YG occupancy: 1566656 K (4718592 K)]2021-03-18T15:20:21.595+0800: 5095.397: [Rescan (parallel) , 0.3725245 secs]2021-03-18T15:20:21.967+0800: 5095.769: [weak refs processing, 0.0005480 secs]2021-03-18T15:20:21.968+0800: 5095.770: [class unloading, 0.0536364 secs]2021-03-18T15:20:22.022+0800: 5095.823: [scrub symbol table, 0.0130051 secs]2021-03-18T15:20:22.035+0800: 5095.836: [scrub string table, 0.0015001 secs][1 CMS-remark: 525226K(1048576K)] 2091883K(5767168K), 0.4418468 secs] [Times: user=1.56 sys=0.00, real=0.44 secs]
-2021-03-18T15:20:22.037+0800: 5095.839: [CMS-concurrent-sweep-start]
-2021-03-18T15:20:22.062+0800: 5095.864: [CMS-concurrent-sweep: 0.024/0.024 secs] [Times: user=0.03 sys=0.00, real=0.03 secs]
-2021-03-18T15:20:22.062+0800: 5095.864: [CMS-concurrent-reset-start]
-2021-03-18T15:20:22.073+0800: 5095.875: [CMS-concurrent-reset: 0.011/0.011 secs] [Times: user=0.01 sys=0.01, real=0.01 secs]
+
+> STW阶段，YG occupancy:年轻代占用及容量
+> [rescan(parallel):STW下的存活对象标记
+> weak refs processing:弱引用处理
+> class unloading:卸载不用的class
+> scrub string table:clean up symbol and string tables which hold class-level metadata and internalized string respectively
+> CMS-remark：525226K(1048576K)：阶段过后的老年代占用及容量
+
 ```
 
 * 查看gc情况：./jstat -gc [pid] 1000
@@ -215,7 +216,7 @@ GCT：垃圾回收消耗总时间
 ```
 
 #### JVM案例
-* 吞吐量：用户代码执行时间 /（用户代码执行时间 + 垃圾回收时间）--离线处理 PS + PO
+* 吞吐量：用户代码执行时间 /（用户代码执行时间 + 垃圾回收时间）--允许较长时间的STW换区总吞吐量最大化，离线处理 PS + PO
 * 响应时间：STW越短，响应时间越高--在线处理并立即响应，关注实时交互 PN + CMS
 * 所谓调优，首先确定，吞吐量优先？还是响应时间优先？
 * 并发量：对于某一个业务的接口，1秒钟可以处理多少个请求（这里的操作可以算做一个事务）
@@ -261,11 +262,7 @@ GCT：垃圾回收消耗总时间
 * 灰色：自身被标记，成员标量未标记
 * 黑色：自身和成员变量都已标记
 
-#### JVM参数
-* 查询默认参数：java -XX:+PrintFlagsInitial | grep 
-* 打印开启参数：java XX:-PrintCommandLineFlags -version
-
-#### #常见晋升老年代机制
+#####常见晋升老年代机制
 * 担保机制
 > 当Survivor区的的内存大小不足以装下下一次Minor GC所有存活对象时，就会启动担保机制，把Survivor区放不下的对象放到老年代；
 
@@ -275,5 +272,18 @@ GCT：垃圾回收消耗总时间
 
 * 长期存活的对象进入老年代
 > 把age大于-XX:MaxTenuringThreshold的对象晋升到老年代；（对象每在Survivor区熬过一次，其age就增加一岁）
+
+#### JVM参数
+* 查询默认参数：java -XX:+PrintFlagsInitial | grep 
+* 打印开启参数：java -XX:+PrintCommandLineFlags -version
+* Parallel常用参数
+    * -XX:PreTenureSizeThreshold=大对象直接放到O区
+    * -XX:MaxTenuringThreshold=升代年龄
+* CMS常用参数
+    * -XX:+UseConcMarkSweepGC
+    * -XX:ParallelCMSThreads:CMS线程数量（机器核数/2）
+    * -XX:CMSInitiatingOccupancyFraction:使用多少比例的老年代后开始CMS收集
+    * -XX:+UseCMSCompactAtFullCollection:在FGC时进行压缩
+    * -XX:CMSFullGCsBeforeCompaction:多少次FGC之后进行压缩
 
 
