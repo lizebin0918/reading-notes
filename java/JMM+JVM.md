@@ -52,6 +52,7 @@ class A {
 * mfence: mix | 在mfence指令前的读写操作必须在mfence后的读写操作前完成 
 
 #### volatile的实现细节
+* volatile除了修饰变量，也可以修饰对象。**而被volatile关键字修饰的对象作为类变量或实例变量时，其对象中携带的类变量和实例变量也相当于被volatile关键字修饰了**
 * 保证了可见性和有序性（实际就是在指令前后添加屏障）
 * 字节码层面：class字节码文件只是添加了一个关键字：volatile
 * JVM层面：
