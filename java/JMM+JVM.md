@@ -42,7 +42,7 @@ class A {
 #### 硬件测数据一致性
 * intel的缓存一致性:MESI--https://www.cnblogs.com/z00377750/p/9180644.html
 * 缓存行：读取缓存以cache line为基本单位，目前64bytes，位于同一缓存行的两个不同数据，被两个不同CPU锁定，产生互相影响的伪共享问题，引出总线风暴问题--https://cloud.tencent.com/developer/article/1707875
-* **解决上述问题：使用缓存行的对齐能够提高效率**，代码:
+* **解决上述问题：使用缓存行的对齐能够提高效率**，代码:[](https://github.com/lizebin0918/test/blob/main/src/main/java/com/lzb/CacheLineTest.java)
 
 #### CPU执行乱序问题
 * CPU如果发现两条指令没有依赖关系，当第一条在执行等待，会在等待过程中执行第二条指令--https://www.cnblogs.com/liushaodong/p/4777308.html
@@ -73,6 +73,10 @@ class A {
 * 一个线程栈里面装着一个个栈帧，每个栈帧包括：Local variable/Operand Stacks/Dynamic linking/return address
 
 #### GC垃圾回收
+* 安全点（safe point）：程序执行时并非在所有地方都能停顿下来开始GC，只有在达到安全点时才能暂停，因为每条指令执行的时间非常短暂，程序不太可能因为指令流长度太长而长时间运行，“长时间执行”的最明显特征就是指令序列复用，例如方法调用、循环跳转、异常跳转等，所以具有这些功能的指令才会产生安全点
+    * 抢占式中断（少用）：GC时，首先把所有线程全部中断，如果有线程中断的地方不在安全点上，就回复线程，让它“跑”到安全点上
+    * 主动式中断：GC不直接对线程操作，仅仅简单滴设置一个标志，各个线程执行时主动去轮询这个标志，发现中断标志为真时就自己中断挂起，轮询标志的地方和安全点是重合的，另外再加上创建对象需要分配内存的地方
+* 安全区域（safe region）：对于部分线程出于Sleep或者Blocked状态的线程，这时候线程无法响应JVM的中断请求，对于这种情况，就需要**安全区域**来解决
 * 怎么定义垃圾？当对象没有被引用
 * 如何找到垃圾？
     * 引用计数
@@ -82,7 +86,7 @@ class A {
     > 常量池
     > JNI 指针
 
-#### GC算法
+#### GC算法（具体垃圾回收算法的实现）
 * Mark-Sweep（标记清除）
     * 太多空间碎片，无法存放大对象
     * 适合存货对象比较多，回收对象比较少的情况
@@ -236,9 +240,9 @@ GCT：垃圾回收消耗总时间
 
 #### #CMS详解
 * 存在问题
-    * 存在内存碎片，产生浮动垃圾，添加参数：-XX:CMSFullGCsBeforeCompaction
+    * 内存碎片，产生浮动垃圾，添加参数：-XX:CMSFullGCsBeforeCompaction，这个操作会导致GC时间变长
 * 第一阶段（初始标记-单线程）：找到根对象（GC Roots）-- This is initial Marking phase of CMS where all the objects directly reachable from roots are marked and this is done with all the mutator threads stopped.
-* 第二阶段（并发标记）：从第一阶段的根对象进行扫描并标记，用户线程和扫描线程并发执行 -- Start of concurrent marking phase.In Concurrent Marking phase, threads stopped in the first phase are started again and all the objects transitively reachable from the objects marked in first phase are marked here
+* 第二阶段（并发标记）：从第一阶段的根对象进行扫描并标记，用户线程和扫描线程并发执行，遍历老年代，标记所有存货的对象-- Start of concurrent marking phase.In Concurrent Marking phase, threads stopped in the first phase are started again and all the objects transitively reachable from the objects marked in first phase are marked here
 * 第三阶段（重新标记-多线程并行）：在上阶段的标记过程中，可能会存在多标记或者漏标记的情况，需要STW，重新整理标记即可
 * 第四阶段（并发清理）
 
