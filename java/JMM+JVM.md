@@ -100,7 +100,7 @@ class A {
 ####堆内存逻辑分区
 * Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法
 * Old 区：tenured，采用Mark Compact 或者 Mark Sweep
-* 方法区：jdk1.7 永久代/jdk1.8 metaspace，存放class对象，1.8之后，字符串常量池存储在堆区
+* 方法区：jdk1.7 永久代/jdk1.8 metaspace，存放class对象，1.8之后，字符串常量池存储在堆区，metaspace 是放在单独的空间
 * 新生代大量死去，少量存货，采用复制算法
 * 老年代存活率高，回收较少，采用MC或MS算法
 * GC按照回收区域分为两大种类型
@@ -307,6 +307,13 @@ GCT：垃圾回收消耗总时间
 * 长期存活的对象进入老年代
 > 把age大于-XX:MaxTenuringThreshold的对象晋升到老年代；（对象每在Survivor区熬过一次，其age就增加一岁）
 
+####分析手段
+* gc日志分析:GCViewer [](https://github.com/chewiebug/GCViewer/releases)
+* dump文件分析：MAT [](https://www.cnblogs.com/trust-freedom/p/6744948.html)
+* 记录好日志
+* 对程序做好性能监控；
+* 根据日志和性能监控数据修改程序；
+* 使用专业工具通过不同的JVM参数进行压测并获得最佳配置。
 ####JVM参数
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
 * 打印开启参数：java -XX:+PrintCommandLineFlags -version
