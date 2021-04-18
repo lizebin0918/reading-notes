@@ -23,6 +23,14 @@ class A {
     }
 }
 ```
+####happen-before
+* 程序顺序执行
+* 锁规则：monitorexit不能在moniterenter之前
+* volatile变量规则
+* 传递性
+* 线程启动规则
+* 线程终止规则
+* 线程中断规则
 
 ####主动使用情况
 * 主动使用情况
@@ -88,7 +96,7 @@ class A {
     * 两边扫描：第一遍标记，第二遍清除
 * Mark-Compact（标记整理（压缩））
     * 扫描两次：第一遍标记对象，第二遍需要移动对象
-* Coping（复制）：适合Eden区
+* Coping（复制，属于整理算法的子集）：适合Eden区
     * 对象的拷贝移动，引用需要调整
     * 需要更多的空间
     
@@ -260,6 +268,7 @@ GCT：垃圾回收消耗总时间
 * gc不要求额外的内存空间（CMS需要预留空间存储浮动垃圾）
 * G1在某些方面弥补了CMS的不足，比如，CMS使用的是mark-sweep算法，会产生内存碎片；**而G1基于copying算法**，高效整理剩余内存，不需要管理内存碎片
 * 内存区域分成（不同角色，实际是把整块内存分成小块-region）：Eden、Survivor、Old、Humongous
+* 一个Region中是标记-清除算法、2个Region之间是复制算法
 * G1使用了gc停顿可预测的模型，来满足用户设定的gc停顿时间，根据用户设定的目标时间，G1会自动地选择哪些region要清除，一次清除多少个region
 * 在物理上不连续，带来了额外的好处--有的分区垃圾对象特别多，有的分区垃圾对象很少，G1会优先回收垃圾对象特别多的分区，即首先手机垃圾最多的分区
 * Young GC : 会进行STW，基于复制算法进行多线程并行回收，CSet是所有年轻代里面的Region
@@ -271,7 +280,6 @@ GCT：垃圾回收消耗总时间
     * 什么时候触发mixed GC？
         * G1HeapWastePercent:在global concurrent marking结束之后，可以知道O区有多少regions需要被回收，在每次YGC之后和再次Mixed GC之前会检查垃圾占比是否达到此参数
         * G1MixedGCLiveThresholdPercent:O区中的存回对象的占比，只有在此参数之下，才会被选入CSet
-
 
 * Card Table：把一个Region分成多个card table
 * 收集集合（CSet）：一组可被回收的分区集合，存活的对象会被移动到另一个可用的分区
