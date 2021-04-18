@@ -67,11 +67,6 @@ class A {
 * OS和硬件层面
     * X86: lock
 
-####Java的内存模型
-* 每个线程都有自己的线程栈和工作内存，每次读取和存储变量都是在工作内存和主内存之间交互
-* JVM会有主内存
-* 一个线程栈里面装着一个个栈帧，每个栈帧包括：Local variable/Operand Stacks/Dynamic linking/return address
-
 ####GC垃圾回收
 * 安全点（safe point）：程序执行时并非在所有地方都能停顿下来开始GC，只有在达到安全点时才能暂停，因为每条指令执行的时间非常短暂，程序不太可能因为指令流长度太长而长时间运行，“长时间执行”的最明显特征就是指令序列复用，例如方法调用、循环跳转、异常跳转等，所以具有这些功能的指令才会产生安全点
     * 抢占式中断（少用）：GC时，首先把所有线程全部中断，如果有线程中断的地方不在安全点上，就回复线程，让它“跑”到安全点上
@@ -97,10 +92,19 @@ class A {
     * 对象的拷贝移动，引用需要调整
     * 需要更多的空间
     
-####堆内存逻辑分区
-* Young（new） 区：eden(8):survivor0(1):survivor1(1)，采用copying算法
-* Old 区：tenured，采用Mark Compact 或者 Mark Sweep
-* 方法区：jdk1.7 永久代/jdk1.8 metaspace，存放class对象，1.8之后，字符串常量池存储在堆区，metaspace 是放在单独的空间
+####堆内存逻辑分区（JVM内存模型）
+* （线程共享）堆：年轻代+老年代
+    * 年轻代（Young 区）：eden(8):survivor0(1):survivor1(1)，采用copying算法 
+    * 老年代（Old 区）：tenured，采用Mark Compact 或者 Mark Sweep
+* （线程共享）jdk1.7 永久代/jdk1.8 metaspace（方法区）：存放class loader对象、静态变量、class变量，1.8之后，字符串常量池存储在堆区，metaspace 是放在单独的空间。**注意：class是放在堆中的，而不是方法区**
+* （线程私有）栈区
+    * 局部变量表
+    * 操作数栈
+    * 指向常量的指针
+* （线程私有）本地方法栈
+    * 虚拟机需要调用的C++代码
+* （线程私有）程序计数器
+    * 代码指向对应的字节码 
 * 新生代大量死去，少量存货，采用复制算法
 * 老年代存活率高，回收较少，采用MC或MS算法
 * GC按照回收区域分为两大种类型
@@ -122,6 +126,7 @@ class A {
         * 由Eden区，survivor0（From Space）区先survivor1（To Space）区复制时，对象大小大于To Space可用内存，则把该对象转存到老年代，且老年代的可用内存小于该对象大小
 
 ####垃圾收集器
+* 注意：新生代的垃圾回收也会引起STW，只是时间较短
 * 组合一：Serial + Serial Old
     * 所有应用线程都要停止，单CPU效率最高，Client模式默认垃圾回收器
     * 在safe point之后才能进行回收 
@@ -310,10 +315,17 @@ GCT：垃圾回收消耗总时间
 ####分析手段
 * gc日志分析:GCViewer [](https://github.com/chewiebug/GCViewer/releases)
 * dump文件分析：MAT [](https://www.cnblogs.com/trust-freedom/p/6744948.html)
-* 记录好日志
-* 对程序做好性能监控；
-* 根据日志和性能监控数据修改程序；
-* 使用专业工具通过不同的JVM参数进行压测并获得最佳配置。
+* 一个原则：不是闲着蛋疼去优化JVM的，需要有业务场景以及问题，发现问题-排查问题-解决方案
+    > 记录好日志
+    > 对程序做好性能监控；
+    > 根据日志和性能监控数据修改程序；
+    > 使用专业工具通过不同的JVM参数进行压测并获得最佳配置
+    > 年轻代和老年代默认比例1:2，很多时候需要让对象在年轻代回收，就会让年轻代的内存增大
+
+####四种引用
+* 强、软（内存不足回收）、弱（垃圾收集回收）、虚引用
+* `Reference`的四种状态：Active、Pending、Enqueued、Inactive
+ 
 ####JVM参数
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
 * 打印开启参数：java -XX:+PrintCommandLineFlags -version
@@ -321,13 +333,14 @@ GCT：垃圾回收消耗总时间
     * -XX:PreTenureSizeThreshold=大对象直接放到O区
     * -XX:MaxTenuringThreshold=升代年龄
     * -XX:+PrintTenuringDistribution:打印对象年龄
-* CMS常用参数
+* CMS常用参数（存在空间碎片）
     * -XX:+UseConcMarkSweepGC
     * -XX:ParallelCMSThreads:CMS线程数量（机器核数/2）
     * -XX:CMSInitiatingOccupancyFraction:使用多少比例的老年代后开始CMS收集
     * -XX:+UseCMSCompactAtFullCollection:在FGC时进行压缩
     * -XX:CMSFullGCsBeforeCompaction:多少次FGC之后进行压缩
-* G1常用参数
-    * -XX:MaxGCPauseMillis:控制回收时长，设置的时间越短表示每次收集的CSet越小，导致垃圾逐步积累变多，最终不得不退化成Serial GC；停顿时间设置过长，导致每次都会产生长时间的停顿
+* G1常用参数（减少空间碎片）
+    * -XX:MaxGCPauseMillis:控制回收时长，设置的时间越短表示每次收集的CSet越小，导致垃圾逐步积累变多，最终不得不退化成Serial GC；停顿时间设置过长，导致每次都会产生长时间的停顿 
+    * -XX:InitiatingHeapOccupancyPercent:启动并发GC时（堆内存使用占比）
 
 
