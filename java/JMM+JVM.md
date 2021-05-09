@@ -341,6 +341,7 @@ GCT：垃圾回收消耗总时间
     * -XX:PreTenureSizeThreshold=大对象直接放到O区
     * -XX:MaxTenuringThreshold=升代年龄
     * -XX:+PrintTenuringDistribution:打印对象年龄
+    * -XX:YoungGenerationSizeIncrement=30:增大年轻代动态扩容增量，默认20
 * CMS常用参数（存在空间碎片）
     * -XX:+UseConcMarkSweepGC
     * -XX:ParallelCMSThreads:CMS线程数量（机器核数/2）
