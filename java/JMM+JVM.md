@@ -248,6 +248,11 @@ GCT：垃圾回收消耗总时间
     * 导出该线程的堆栈（jstack）
     * 查找哪个栈帧的消耗时间（jstack，要转成16进制）
     * 工作线程占比高 | 垃圾回收线程占比高
+    * Java进程被系统kill
+    
+    > `egrep -i 'killed process' /var/log/messages`
+    > `dmesg -T | grep "(java)"`
+    
 * 查看当前堆中最多的对象排名：./jmap -histo [pid] | head -20
 * 线上环境开启jmx需要运维开通端口，还要配置账号密码，**而且对程序运行有一定影响**，一般不会采用，最好还是用arthas，图形界面是在压测阶段用的
 
