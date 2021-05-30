@@ -11,14 +11,20 @@
 * Channel
     * 可以向其写入或者读取数据，但是读写数据都是通过Buffer进行的
 
-## IO模型（同步阻塞、异步非阻塞）
-* 同步：正常调用
-* 异步：基于回调
-* 阻塞：没开线程
-* 非阻塞：开了线程轮询（NIO-）
+## IO模型
+
+* 阻塞：read/write是否阻塞
+* 同步：线程判断是否可读可写
+* 异步：无需判断是否可读可写，直接由对方回调告知
 * BIO(同步阻塞IO):传统IO-一个进一个出，每个线程开一个socket依然是BIO模型（只是提高了吞吐量，多线程切换、新建、销毁都是耗费资源的）
-* NIO(同步非阻塞IO):多路复用，一条路可以进出，并且加入了缓冲区，不用再阻塞，线程池实现异步（Selector类似叫号员）
+* NIO(同步非阻塞IO):多路复用（单线程检测），一条路可以进出，并且加入了缓冲区，不用再阻塞（Selector类似叫号员）
 * AIO(异步非阻塞):事件驱动，回调
+
+| 阻塞 | 非阻塞 |
+| --- | --- |
+| 阻塞式I/O模型（同步）:单线程read/wirte阻塞 | 非阻塞式I/O模型（同步）：read/write立即返回（通过判断selector是否有值可读或者可写） |
+| I/O多路复用模型（同步）：用一个线程来检查多个文件描述符（Socket）的就绪状态 | 信号驱动I/O模型（异步）：直接传递Handler，内核返回执行即可 |
+|  | 异步IO模型（异步） |
 
 ## 目前流行的多路复用IO模型
 
@@ -37,7 +43,7 @@
 * capacity:容量（不可变），**比如长度=6，capacity=6（指向最后一个预留位）**，用来区分“空”和“满”的情况。数组实现的回环队列同理）
 * limit:最后一个可读写的下一位索引（也是第一个不可读写的索引）
 * position:第一个（将要）读或者写的索引
-* flip():写模式切换成读模式，position 恒小于或等于 limit
+* flip():读写模式互换，position 恒小于或等于 limit
     * 写->读：position指向第一个可读的位置，limit指向可读的最后一位的下一位
     * 读->写：position指向第一个可写的位置，limit指向可写的最后一位的下一位
     
@@ -67,12 +73,11 @@
 * 用完就会被回收掉
 * [](https://www.bilibili.com/video/BV1Bp4y1B7zc?from=search&seid=3312293717851805791)
 
-## Selector
-* Selector.Key:监听事件
+## Selector(总部调度者，所有Channal都要注册到上面)
+* `SelectionKey`:监听事件，并返回对应监听的Channel（ServerSocketChannal.accept()，SocketChannel.read()/write()）
 * `selector.keys()`:返回所有事件（连接、可读、可写、断开）
 * `selector.selectedKeys()`:返回指定事件（keys的子集）
 * `selectionKeys.iterator().next().cancel()`:返回从指定事件取消的事件（keys的子集）
-* 
 * 轮询所有socket，把可写可读的socket返回给Channel
 * 监听ACCEPT事件，再转成WRITE事件，这样Selector的性能及其低下
 
