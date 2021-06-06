@@ -1,15 +1,15 @@
-###视频笔记-JMM
+### 视频笔记-JMM
 
-####工具：https://console.perfma.com/
+#### 工具：https://console.perfma.com/
 
-####各个类加载器职责
+#### 各个类加载器职责
 
 * Bootstrap ClassLoader：JAVA_HOME/jre/lib/rt.jar、resources.jar、sun.boot.class.path路径下的包，用于提供jvm运行所需的包
 * Extension ClassLoader：派生继承自java.lang.ClassLoader，父类加载器为启动类加载器。从系统属性：java.ext.dirs目录中加载类库，或者从JDK安装目录：jre/lib/ext目录下加载类库
 * Application Classloader：它负责加载环境变量classpath或者系统属性java.class.path指定路径下的类库。它是程序中默认的类加载器，我们Java程序中的类，都是由它加载完成的。
 * Custom Classloader:自定义类加载器
 
-####类的加载过程
+#### 类的加载过程
 * 加载（loading）：查找并加载类的二进制数据（*.class文件）
 * 准备（preparation）：为类的**静态变量**分配内存，并将其初始化为默认值，这里的默认值就是说引用对象为null，但是指对象就等于它们对应的默认值，这里的默认值如果是int就是为0，boolean就是为false，引用类型就是为null#这个class还没new，不会为实例变量分配内存
 * 解析（resolution）：解析：把类中的符号引用转换为直接引用（Object a = Object.class//指向这个class的实际内存地址）
@@ -23,7 +23,7 @@ class A {
     }
 }
 ```
-####happen-before
+#### happen-before
 * 程序顺序执行
 * 锁规则：monitorexit不能在moniterenter之前
 * volatile变量规则
@@ -32,7 +32,7 @@ class A {
 * 线程终止规则
 * 线程中断规则
 
-####主动使用情况
+#### 主动使用情况
 * 主动使用情况
 * 创建类的实例
 * 访问类或者接口的静态变量，或者对该静态变量赋值
@@ -41,18 +41,18 @@ class A {
 * 初始化一个类的子类
 * Java虚拟机启动时被标明为启动类的类
 
-####双亲委托机制
+#### 双亲委托机制
 * 父加载器不是"类加载器的加载器"
 * 各个类加载器之间并不是继承关系，只是引用了parent属性而已，加载一个类会一直递归往上找对应的类加载器，如果没有找到就往下找到对应父类加载
 * 双亲委派是一个孩子向父亲方向，然后父亲向孩子方向的双亲委派过程。如果父亲能加载就让父亲加载，如果都不能就只能自己加载，如果我们自己写了一个String类，并且把这个类加载了，这样就会有安全问题。
 * 自定义类加载器：实现jdk的ClassLoader抽象类，重写findClass方法，每次都会根据双亲委派原则加载Class。如果需要实现热部署，可以直接重写loadClass()，无需从父类需要class，重新生成ClassLoader并加载class即可
 
-####硬件测数据一致性
+#### 硬件测数据一致性
 * intel的缓存一致性:MESI--https://www.cnblogs.com/z00377750/p/9180644.html
 * 缓存行：读取缓存以cache line为基本单位，目前64bytes，位于同一缓存行的两个不同数据，被两个不同CPU锁定，产生互相影响的伪共享问题，引出总线风暴问题--https://cloud.tencent.com/developer/article/1707875
 * **解决上述问题：使用缓存行的对齐能够提高效率**，代码:[](https://github.com/lizebin0918/test/blob/main/src/main/java/com/lzb/CacheLineTest.java)
 
-####CPU执行乱序问题
+#### CPU执行乱序问题
 * CPU如果发现两条指令没有依赖关系，当第一条在执行等待，会在等待过程中执行第二条指令--https://www.cnblogs.com/liushaodong/p/4777308.html
 * 解决乱序问题：CPU内存屏障
 * sfence: store | 在sfence指令前的写操作必须在sfence指令后的写操作前完成
@@ -89,7 +89,7 @@ class A {
     > 常量池
     > JNI 指针
 
-####GC算法（具体垃圾回收算法的实现）
+#### GC算法（具体垃圾回收算法的实现）
 * Mark-Sweep（标记清除）
     * 太多空间碎片，无法存放大对象
     * 适合存货对象比较多，回收对象比较少的情况
@@ -100,7 +100,7 @@ class A {
     * 对象的拷贝移动，引用需要调整
     * 需要更多的空间
     
-####堆内存逻辑分区（JVM内存模型）
+#### 堆内存逻辑分区（JVM内存结构）
 * （线程共享）堆：年轻代+老年代
     * 年轻代（Young 区）：eden(8):survivor0(1):survivor1(1)，采用copying算法 
     * 老年代（Old 区）：tenured，采用Mark Compact 或者 Mark Sweep
@@ -133,7 +133,7 @@ class A {
         * 通过Minor GC后进入老年代的平均大小大于老年代的可用内存
         * 由Eden区，survivor0（From Space）区先survivor1（To Space）区复制时，对象大小大于To Space可用内存，则把该对象转存到老年代，且老年代的可用内存小于该对象大小
 
-####垃圾收集器
+#### 垃圾收集器
 * 注意：新生代的垃圾回收也会引起STW，只是时间较短
 * 组合一：Serial + Serial Old
     * 所有应用线程都要停止，单CPU效率最高，Client模式默认垃圾回收器
@@ -157,11 +157,12 @@ class A {
             * GC日志：Concurrent Mode Failure / PromotionFailed
             * 解决方案：降低出发CMS的阈值-CMSInitiatingOccupancyFraction 从默认的92%降低到68%，会浪费一些内存，换来更早地释放垃圾
 
-####常用指令
+#### 常用指令
 * dump出堆内存快照，解析工具：MAT/jhat
 * 在线分析工具：https://console.perfma.com/
 
-####日志详解
+#### 日志详解
+
 * 生产环境的gc log 需要按大小切分，不然没法看
 
 ```
@@ -233,7 +234,7 @@ FGCT：老年代垃圾回收消耗时间
 GCT：垃圾回收消耗总时间
 ```
 
-####JVM案例
+#### JVM案例
 * 吞吐量：用户代码执行时间 /（用户代码执行时间 + 运行垃圾回收时间（非STW的时间））--允许较长时间的STW换区总吞吐量最大化，离线处理 PS + PO，单位时间内，最大化一个应用的工作量
 * 响应时间：STW越短，响应时间越高--在线处理并立即响应，关注实时交互 PN + CMS
 * 所谓调优，首先确定，吞吐量优先？还是响应时间优先？
@@ -256,7 +257,7 @@ GCT：垃圾回收消耗总时间
 * 查看当前堆中最多的对象排名：./jmap -histo [pid] | head -20
 * 线上环境开启jmx需要运维开通端口，还要配置账号密码，**而且对程序运行有一定影响**，一般不会采用，最好还是用arthas，图形界面是在压测阶段用的
 
-#####CMS详解
+##### CMS详解
 * 存在问题
     * 内存碎片，产生浮动垃圾，添加参数：-XX:CMSFullGCsBeforeCompaction，这个操作会导致GC时间变长
 * 第一阶段（初始标记-单线程）：找到根对象（GC Roots）-- This is initial Marking phase of CMS where all the objects directly reachable from roots are marked and this is done with all the mutator threads stopped.
@@ -264,7 +265,7 @@ GCT：垃圾回收消耗总时间
 * 第三阶段（重新标记-多线程并行）：在上阶段的标记过程中，可能会存在多标记或者漏标记的情况，需要STW，重新整理标记即可
 * 第四阶段（并发清理）
 
-#####G1详解[](https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html)
+##### G1详解[](https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html)
 * 视频：[](https://www.bilibili.com/video/BV1D741177rV?p=2&share_source=copy_web)
 * 与应用线程同时工作，几乎不需要STW
 * 整理剩余空间，不产生内存碎片
@@ -299,7 +300,7 @@ GCT：垃圾回收消耗总时间
 * 更容易预测的GC暂停时间
 * 适用不需要事先很高的吞吐量的场景，**吞吐量也很重要，但是往往通过升级硬件即可**    
 
-####三色标记算法
+#### 三色标记算法
 * 白色：未标记的对象
 * 灰色：自身被标记，成员变量未标记完
 * 黑色：自身和成员变量都已标记
@@ -313,7 +314,7 @@ GCT：垃圾回收消耗总时间
     * post Write Barrier--增量更新，关注引用的增加，把黑色重新标记为灰色，下次重新扫描
     * pre Write Barrier -- 关注引用的删除，当灰色指向白色消失时，要把这个引用推到GC的堆栈，保证白色还能被GC扫描到
 
-#####常见晋升老年代机制
+##### 常见晋升老年代机制
 * 担保机制
 > 在Serial+Serial Old的情况下，发现放不下就直接启动担保机制；在Parallel Scavenge+Serial Old的情况下，却是先要去判断一下要分配的内存是不是>=Eden区大小的一半，如果是那么直接把该对象放入老生代，否则才会启动担保机制
 > 当Survivor区的的内存大小不足以装下下一次Minor GC所有存活对象时，就会启动担保机制，把Survivor区放不下的对象放到老年代；
@@ -325,7 +326,7 @@ GCT：垃圾回收消耗总时间
 * 长期存活的对象进入老年代
 > 把age大于-XX:MaxTenuringThreshold的对象晋升到老年代；（对象每在Survivor区熬过一次，其age就增加一岁）
 
-####分析手段
+#### 分析手段
 * gc日志分析:GCViewer [](https://github.com/chewiebug/GCViewer/releases)
 * dump文件分析：MAT [](https://www.cnblogs.com/trust-freedom/p/6744948.html)
 * 一个原则：不是闲着蛋疼去优化JVM的，需要有业务场景以及问题，发现问题-排查问题-解决方案
@@ -335,9 +336,46 @@ GCT：垃圾回收消耗总时间
     > 使用专业工具通过不同的JVM参数进行压测并获得最佳配置
     > 年轻代和老年代默认比例1:2，很多时候需要让对象在年轻代回收，就会让年轻代的内存增大
 
-####四种引用
-* 强、软（内存不足回收）、弱（垃圾收集回收）、虚引用
-* `Reference`的四种状态：Active、Pending、Enqueued、Inactive
+#### 四种引用
+* 注意：**这里所说的回收是指这个对象只有某种引用可达，而且没有被其他引用可达，这样才满足回收的条件**
+* StrongReference
+* SoftReference（内存不足回收）：
+* WeakReference（垃圾收集回收）
+* PhantomReference（用于管理堆外内存，当堆内内存回收，触发堆外内存回收-Cleaner）：**表示某种引用指向对应的对象（也可以说是某种引用可达），比如`WeakReference<Object>`，这个对象可能是被软引用和弱引用同时指向**
+* `Reference`的四种状态:Active/Pending/Enqueued/Inactive
+* `ReferenceQueue`-引用队列，在检测到适当的可到达性更改后，垃圾回收器将已注册的引用对象添加到该队列中。实现了一个队列的入队(enqueue)和出队(poll还有remove)操作，内部元素就是泛型的Reference，并且Queue的实现，是由Reference自身的链表结构( 单向循环链表 )所实现的。
+* `reference`:代表对象本身
+* `DirectByteBuffer`如何回收？
+    * 发生GC自动回收 
+        * Reference.ReferenceHandler().start()会在静态代码块里面启动，创建一个守护线程
+        * ReferenceHandler作用:该线程的作用就是在GC结束后，将被回收的Reference对象通知其所有者，然后其所有者做相应处理(一般是在下次做查询或者修改的时候清除已经被回收的对象引用) 
+        
+        ```java
+        static {
+            ThreadGroup tg = Thread.currentThread().getThreadGroup();
+            for (ThreadGroup tgn = tg;
+                 tgn != null;
+                 tg = tgn, tgn = tg.getParent());
+            Thread handler = new ReferenceHandler(tg, "Reference Handler");
+            /* If there were a special system-only priority greater than
+             * MAX_PRIORITY, it would be used here
+             */
+            handler.setPriority(Thread.MAX_PRIORITY);
+            handler.setDaemon(true);
+            handler.start();
+    
+            // provide access in SharedSecrets
+            SharedSecrets.setJavaLangRefAccess(new JavaLangRefAccess() {
+                @Override
+                public boolean tryHandlePendingReference() {
+                    return tryHandlePending(false);
+                }
+            });
+        }
+        ```
+        
+        * 调用Cleaner.clean()
+        * clean()实际调用的是:Deallocator.run
  
 ####JVM参数
 * 查询默认参数：java -XX:+PrintFlagsInitial | grep 
